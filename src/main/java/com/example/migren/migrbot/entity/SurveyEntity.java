@@ -12,7 +12,7 @@ public class SurveyEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long chat_id;
-    private String pain_date;
+    private Long chatId;
+    private String painDate;
     private String comment;
 }

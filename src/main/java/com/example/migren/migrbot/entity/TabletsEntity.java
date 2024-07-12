@@ -12,7 +12,7 @@ public class TabletsEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long survey_id;
-    private String name_tablets;
+    private Long surveyId;
+    private String nameTablets;
     private boolean help;
 }

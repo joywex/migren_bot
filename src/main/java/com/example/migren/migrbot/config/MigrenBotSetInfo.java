@@ -37,25 +37,36 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        SendMessage sendMessage = this.migrenBotService.sendMessage(update);
-//            execute(this.migrenBotService.sendMessage(update));
         try {
-            Message sentMessage = execute(sendMessage);// Отправка сообщения и сохранение отправленного сообщения
-            int sentMessageId = sentMessage.getMessageId();
-
-            // Пример удаления сообщения через 5 секунд
-            new Timer().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    deleteBotMessage(update.getMessage().getChatId(), sentMessageId);
-                }
-            }, 3000);
+            execute(this.migrenBotService.sendMessage(update));
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
 
 
     }
+
+//    @Override
+//    public void onUpdateReceived(Update update) {
+//        SendMessage sendMessage = this.migrenBotService.sendMessage(update);
+////            execute(this.migrenBotService.sendMessage(update));
+//        try {
+//            Message sentMessage = execute(sendMessage);// Отправка сообщения и сохранение отправленного сообщения
+//            int sentMessageId = sentMessage.getMessageId();
+//
+//            // Пример удаления сообщения через 5 секунд
+//            new Timer().schedule(new TimerTask() {
+//                @Override
+//                public void run() {
+//                    deleteBotMessage(update.getMessage().getChatId(), sentMessageId);
+//                }
+//            }, 3000);
+//        } catch (TelegramApiException e) {
+//            e.printStackTrace();
+//        }
+//
+//
+//    }
 
     public void deleteBotMessage(long chatId, int messageId) {
         DeleteMessage deleteMessage = new DeleteMessage();

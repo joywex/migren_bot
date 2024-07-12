@@ -1,8 +1,10 @@
 package com.example.migren.migrbot.service;
 
 import com.example.migren.migrbot.entity.SurveyEntity;
+import com.example.migren.migrbot.entity.TabletsEntity;
 import com.example.migren.migrbot.entity.UsersEntity;
 import com.example.migren.migrbot.repository.SurveyRepository;
+import com.example.migren.migrbot.repository.TabletsRepository;
 import com.example.migren.migrbot.repository.UsersRepository;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -29,16 +31,19 @@ public class MigrenBotService {
 
     private final SurveyRepository surveyRepository;
     private final UsersRepository usersRepository;
+    private final TabletsRepository tabletsRepository;
+    private String datePain;
 
-    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository) {
+    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository) {
         this.surveyRepository = surveyRepository;
         this.usersRepository = usersRepository;
+        this.tabletsRepository = tabletsRepository;
     }
 
     public SendMessage sendMessage(Update update) {
         SendMessage sendMessage = new SendMessage();
         if (update.getMessage() == null) {
-            sendMessage = getCallBackData(update);
+            sendMessage = getCallBackDataPain(update);
         } else {
             switch (update.getMessage().getText().toLowerCase()) {
                 case "/start":
@@ -58,6 +63,31 @@ public class MigrenBotService {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
         sendMessage.setText("У вас болела голова?");
+
+        createKeyboard();
+        sendMessage.setReplyMarkup(createKeyboard());
+        return sendMessage;
+    }
+
+    private SendMessage tabletsChoice(Message message) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(message.getChatId()));
+        sendMessage.setText("Принимали ли Вы лекартство?");
+
+        createKeyboard();
+        sendMessage.setReplyMarkup(createKeyboard());
+        return sendMessage;
+    }
+
+    private void createUser(Message message) {
+        if (usersRepository.hasUserByChatId(message.getChatId()).isEmpty()) {
+            UsersEntity usersEntity = new UsersEntity();
+            usersEntity.setChatId(message.getChatId());
+            usersRepository.save(usersEntity);
+        }
+    }
+
+    private InlineKeyboardMarkup createKeyboard() {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
 
@@ -72,19 +102,25 @@ public class MigrenBotService {
         row.add(inlineKeyboardButton1);
         msgButtons.add(row);
         inlineKeyboardMarkup.setKeyboard(msgButtons);
-        sendMessage.setReplyMarkup(inlineKeyboardMarkup);
-        return sendMessage;
+        return inlineKeyboardMarkup;
     }
 
-    private void createUser(Message message) {
-        if (usersRepository.hasUserByChatId(message.getChatId()).isEmpty()) {
-            UsersEntity usersEntity = new UsersEntity();
-            usersEntity.setChatId(message.getChatId());
-            usersRepository.save(usersEntity);
+    private SendMessage getCallBackDataTablets(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        String callbackData = update.getCallbackQuery().getData();
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+        switch (callbackData) {
+            case "1":
+                TabletsEntity tabletsEntity = new TabletsEntity();
+                tabletsEntity.setSurveyId(surveyRepository.findIdByPainDate(datePain));
+
         }
+
     }
 
-    private SendMessage getCallBackData(Update update) {
+    private SendMessage getCallBackDataPain(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
         String callbackData = update.getCallbackQuery().getData();
@@ -93,11 +129,12 @@ public class MigrenBotService {
         switch (callbackData) {
             case "1":
                 SurveyEntity surveyEntity = new SurveyEntity();
-                surveyEntity.setChat_id(update.getCallbackQuery().getMessage().getChatId());
+                surveyEntity.setChatId(update.getCallbackQuery().getMessage().getChatId());
                 LocalDateTime currentDate = LocalDateTime.now();
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
                 String formattedDate = currentDate.format(formatter);
-                surveyEntity.setPain_date(formattedDate);
+                surveyEntity.setPainDate(formattedDate);
+                datePain = formattedDate;
                 surveyRepository.save(surveyEntity);
                 sendMessage.setText("Запись успешно добавлена.");
                 break;
