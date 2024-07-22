@@ -8,23 +8,15 @@ import com.example.migren.migrbot.repository.TabletsRepository;
 import com.example.migren.migrbot.repository.UsersRepository;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import javax.swing.text.DateFormatter;
-import java.text.DateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Component
 public class MigrenBotService {
@@ -72,7 +64,7 @@ public class MigrenBotService {
     private SendMessage tabletsChoice(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
-        sendMessage.setText("Принимали ли Вы лекартство?");
+        sendMessage.setText("Принимали ли Вы лекарство?");
 
         createKeyboard();
         sendMessage.setReplyMarkup(createKeyboard());
@@ -115,9 +107,14 @@ public class MigrenBotService {
             case "1":
                 TabletsEntity tabletsEntity = new TabletsEntity();
                 tabletsEntity.setSurveyId(surveyRepository.findIdByPainDate(datePain));
+                tabletsRepository.save(tabletsEntity);
+                sendMessage.setText("Введите название лекарства:");
+                break;
+            case "0":
+                sendMessage.setText("Запись успешно добавлена. До встречи завтра!");
 
         }
-
+        return sendMessage;
     }
 
     private SendMessage getCallBackDataPain(Update update) {
@@ -137,6 +134,7 @@ public class MigrenBotService {
                 datePain = formattedDate;
                 surveyRepository.save(surveyEntity);
                 sendMessage.setText("Запись успешно добавлена.");
+
                 break;
             case "0":
                 sendMessage.setText("Отлично, рад за Вас!");
