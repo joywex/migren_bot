@@ -38,6 +38,9 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         try {
+            if (!migrenBotService.hasUser(update.getMessage())) {
+                execute(this.migrenBotService.firstMsg(update));
+            }
             execute(this.migrenBotService.sendMessage(update));
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);

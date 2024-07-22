@@ -47,29 +47,40 @@ public class MigrenBotService {
         return sendMessage;
     }
 
-    private String firstMsg() {
-        return "Добро пожаловать!";
+    public SendMessage firstMsg(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
+        sendMessage.setText("Добро пожаловать!");
+        return sendMessage;
+    }
+
+    public boolean hasUser(Message message) {
+        if (message == null) {
+            return true;
+        }
+        return usersRepository.hasUserByChatId(message.getChatId()).isPresent();
     }
 
     private SendMessage painChoice(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
-        sendMessage.setText("У вас болела голова?");
+        sendMessage.setText("У вас сегодня болела голова?");
 
         createKeyboard();
         sendMessage.setReplyMarkup(createKeyboard());
         return sendMessage;
     }
 
-    private SendMessage tabletsChoice(Message message) {
+    private SendMessage tabletsChoice(Update update) {
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(message.getChatId()));
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
         sendMessage.setText("Принимали ли Вы лекарство?");
 
         createKeyboard();
         sendMessage.setReplyMarkup(createKeyboard());
         return sendMessage;
     }
+
 
     private void createUser(Message message) {
         if (usersRepository.hasUserByChatId(message.getChatId()).isEmpty()) {
@@ -135,6 +146,7 @@ public class MigrenBotService {
                 surveyRepository.save(surveyEntity);
                 sendMessage.setText("Запись успешно добавлена.");
 
+                sendMessage = tabletsChoice(update);
                 break;
             case "0":
                 sendMessage.setText("Отлично, рад за Вас!");
