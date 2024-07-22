@@ -24,7 +24,6 @@ public class MigrenBotService {
     private final SurveyRepository surveyRepository;
     private final UsersRepository usersRepository;
     private final TabletsRepository tabletsRepository;
-    private String datePain;
 
     public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository) {
         this.surveyRepository = surveyRepository;
@@ -117,7 +116,10 @@ public class MigrenBotService {
         switch (callbackData) {
             case "1":
                 TabletsEntity tabletsEntity = new TabletsEntity();
-                tabletsEntity.setSurveyId(surveyRepository.findIdByPainDate(datePain));
+                LocalDateTime currentDate = LocalDateTime.now();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+                String formattedDate = currentDate.format(formatter);
+                tabletsEntity.setSurveyId(surveyRepository.findIdByPainDate(formattedDate));
                 tabletsRepository.save(tabletsEntity);
                 sendMessage.setText("Введите название лекарства:");
                 break;
@@ -142,7 +144,6 @@ public class MigrenBotService {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
                 String formattedDate = currentDate.format(formatter);
                 surveyEntity.setPainDate(formattedDate);
-                datePain = formattedDate;
                 surveyRepository.save(surveyEntity);
                 sendMessage.setText("Запись успешно добавлена.");
 
