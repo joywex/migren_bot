@@ -1,0 +1,1 @@
+alter table survey rename column comment to last_question;

@@ -12,4 +12,5 @@ public class UsersEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long chatId;
+    private String lastQuestion;
 }

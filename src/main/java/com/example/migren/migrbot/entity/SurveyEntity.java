@@ -14,5 +14,4 @@ public class SurveyEntity {
     private Long id;
     private Long chatId;
     private String painDate;
-    private String comment;
 }

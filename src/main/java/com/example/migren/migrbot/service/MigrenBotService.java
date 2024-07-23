@@ -33,8 +33,8 @@ public class MigrenBotService {
 
     public SendMessage sendMessage(Update update) {
         SendMessage sendMessage = new SendMessage();
-        if (update.getMessage() == null) {
-            sendMessage = getCallBackDataPain(update);
+        if (update.hasCallbackQuery()) {
+            sendMessage = chooseCallbackData(update);
         } else {
             switch (update.getMessage().getText().toLowerCase()) {
                 case "/start":
@@ -60,6 +60,26 @@ public class MigrenBotService {
         return usersRepository.hasUserByChatId(message.getChatId()).isPresent();
     }
 
+    private SendMessage chooseCallbackData(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+        String newLastQuestion = "";
+
+        switch (usersRepository.getLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId())) {
+            case "":
+                sendMessage = getCallBackDataPain(update);
+                newLastQuestion = "Принимали ли Вы лекарство?";
+                usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+                break;
+            case "Принимали ли Вы лекарство?":
+                sendMessage = getCallBackDataTablets(update);
+                newLastQuestion = "Лекарство помогло от головной боли?";
+                usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+                break;
+        }
+        return sendMessage;
+    }
+
     private SendMessage painChoice(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
@@ -80,32 +100,32 @@ public class MigrenBotService {
         return sendMessage;
     }
 
+    private SendMessage helpChoice(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
+        sendMessage.setText("Лекарство помогло от головной боли?");
 
-    private void createUser(Message message) {
-        if (usersRepository.hasUserByChatId(message.getChatId()).isEmpty()) {
-            UsersEntity usersEntity = new UsersEntity();
-            usersEntity.setChatId(message.getChatId());
-            usersRepository.save(usersEntity);
-        }
+        createKeyboard();
+        sendMessage.setReplyMarkup(createKeyboard());
+        return sendMessage;
     }
 
-    private InlineKeyboardMarkup createKeyboard() {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
-
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-        inlineKeyboardButton.setText("Да");
-        inlineKeyboardButton.setCallbackData("1");
-        row.add(inlineKeyboardButton);
-        InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
-        inlineKeyboardButton1.setText("Нет");
-        inlineKeyboardButton1.setCallbackData("0");
-        row.add(inlineKeyboardButton1);
-        msgButtons.add(row);
-        inlineKeyboardMarkup.setKeyboard(msgButtons);
-        return inlineKeyboardMarkup;
-    }
+//    private SendMessage getCallBackDataHelp(Update update) {
+//        SendMessage sendMessage = new SendMessage();
+//        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+//        String callbackData = update.getCallbackQuery().getData();
+//        long chatId = update.getCallbackQuery().getMessage().getChatId();
+//
+//        switch (callbackData) {
+//            case "1":
+//                TabletsEntity
+//                break;
+//            case "0":
+//                sendMessage.setText("Запись успешно добавлена. До встречи завтра!");
+//
+//        }
+//        return sendMessage;
+//    }
 
     private SendMessage getCallBackDataTablets(Update update) {
         SendMessage sendMessage = new SendMessage();
@@ -145,7 +165,6 @@ public class MigrenBotService {
                 String formattedDate = currentDate.format(formatter);
                 surveyEntity.setPainDate(formattedDate);
                 surveyRepository.save(surveyEntity);
-                sendMessage.setText("Запись успешно добавлена.");
 
                 sendMessage = tabletsChoice(update);
                 break;
@@ -155,5 +174,34 @@ public class MigrenBotService {
         }
         return sendMessage;
     }
+
+    private void createUser(Message message) {
+        if (usersRepository.hasUserByChatId(message.getChatId()).isEmpty()) {
+            UsersEntity usersEntity = new UsersEntity();
+            usersEntity.setChatId(message.getChatId());
+            usersEntity.setLastQuestion("");
+            usersRepository.save(usersEntity);
+        }
+    }
+
+    private InlineKeyboardMarkup createKeyboard() {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
+
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+        inlineKeyboardButton.setText("Да");
+        inlineKeyboardButton.setCallbackData("1");
+        row.add(inlineKeyboardButton);
+        InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
+        inlineKeyboardButton1.setText("Нет");
+        inlineKeyboardButton1.setCallbackData("0");
+        row.add(inlineKeyboardButton1);
+        msgButtons.add(row);
+        inlineKeyboardMarkup.setKeyboard(msgButtons);
+        return inlineKeyboardMarkup;
+    }
+
+
 
 }
