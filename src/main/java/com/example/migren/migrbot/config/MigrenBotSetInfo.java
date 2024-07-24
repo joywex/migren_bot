@@ -3,16 +3,8 @@ package com.example.migren.migrbot.config;
 import com.example.migren.migrbot.service.MigrenBotService;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-
-import javax.print.attribute.standard.Media;
-import java.util.Timer;
-import java.util.TimerTask;
 
 @Component
 public class MigrenBotSetInfo extends TelegramLongPollingBot {
@@ -45,8 +37,6 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
-
-
     }
 
 //    @Override
@@ -71,16 +61,16 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
 //
 //    }
 
-    public void deleteBotMessage(long chatId, int messageId) {
-        DeleteMessage deleteMessage = new DeleteMessage();
-        deleteMessage.setChatId(String.valueOf(chatId));
-        deleteMessage.setMessageId(messageId);
-        try {
-            execute(deleteMessage);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
-    }
+//    public void deleteBotMessage(long chatId, int messageId) {
+//        DeleteMessage deleteMessage = new DeleteMessage();
+//        deleteMessage.setChatId(String.valueOf(chatId));
+//        deleteMessage.setMessageId(messageId);
+//        try {
+//            execute(deleteMessage);
+//        } catch (TelegramApiException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
 
 
 

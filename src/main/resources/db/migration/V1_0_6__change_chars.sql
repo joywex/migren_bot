@@ -1,0 +1,1 @@
+alter table tablets alter column comment type varchar(1000);

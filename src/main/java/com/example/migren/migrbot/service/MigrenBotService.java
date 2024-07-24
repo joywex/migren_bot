@@ -1,5 +1,6 @@
 package com.example.migren.migrbot.service;
 
+import com.example.migren.migrbot.config.MigrenBotSetInfo;
 import com.example.migren.migrbot.entity.SurveyEntity;
 import com.example.migren.migrbot.entity.TabletsEntity;
 import com.example.migren.migrbot.entity.UsersEntity;
@@ -33,16 +34,56 @@ public class MigrenBotService {
 
     public SendMessage sendMessage(Update update) {
         SendMessage sendMessage = new SendMessage();
+        long chatId;
+
         if (update.hasCallbackQuery()) {
             sendMessage = chooseCallbackData(update);
-        } else {
-            switch (update.getMessage().getText().toLowerCase()) {
-                case "/start":
-                    createUser(update.getMessage());
-                    sendMessage = painChoice(update.getMessage());
-                    break;
+            chatId = update.getCallbackQuery().getMessage().getChatId();
+        } else if (update.hasMessage() && update.getMessage().hasText()) {
+            chatId = update.getMessage().getChatId();
+            String msg = update.getMessage().getText().toLowerCase();
+
+            if (msg != null && msg.trim().isEmpty()) {
+                saveComment(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), msg);
+                sendMessage.setChatId(String.valueOf(chatId));
+                sendMessage.setText("Комменатрий добавлен.");
+            } else {
+                switch (msg) {
+                    case "/start":
+                        createUser(update.getMessage());
+                        if (surveyRepository.findIdByChatIdAndPainDate(update.getMessage().getChatId(), getFormatDate()) == null) {
+                            sendMessage = painChoice(update.getMessage());
+                        } else {
+                            sendMessage.setChatId(String.valueOf(chatId));
+                            sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
+                        }
+                        break;
+                    default:
+                        sendMessage.setChatId(String.valueOf(chatId));
+                        sendMessage.setText("Нажмите на одну из кнопок.");
+                        break;
+                }
             }
+            
         }
+
+
+//        } else {
+//            switch (update.getMessage().getText().toLowerCase()) {
+//                case "/start":
+//                    createUser(update.getMessage());
+//                    if (surveyRepository.findIdByChatIdAndPainDate(update.getMessage().getChatId(), getFormatDate()) == null) {
+//                        sendMessage = painChoice(update.getMessage());
+//                    } else {
+//                        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
+//                        sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
+//                    }
+//                    break;
+//                default:
+//                    sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
+//                    sendMessage.setText("Нажмите на одну из кнопок.");
+//            }
+//        }
         return sendMessage;
     }
 
@@ -64,17 +105,33 @@ public class MigrenBotService {
         SendMessage sendMessage = new SendMessage();
         long chatId = update.getCallbackQuery().getMessage().getChatId();
         String newLastQuestion = "";
+        int msgId = update.getCallbackQuery().getMessage().getMessageId();
 
         switch (usersRepository.getLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId())) {
             case "":
                 sendMessage = getCallBackDataPain(update);
-                newLastQuestion = "Принимали ли Вы лекарство?";
-                usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+                if (surveyRepository.existsByChatIdAndPainDate(chatId, getFormatDate())) {
+                    newLastQuestion = "Принимали ли Вы лекарство?";
+                    usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+                }
+
                 break;
             case "Принимали ли Вы лекарство?":
                 sendMessage = getCallBackDataTablets(update);
-                newLastQuestion = "Лекарство помогло от головной боли?";
+                if (tabletsRepository.existsBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()))) {
+                    newLastQuestion = "Лекарство помогло от головной боли?";
+                    usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+                } else {
+                    setQuestion(update);
+                }
+                break;
+            case "Лекарство помогло от головной боли?":
+                sendMessage = getCallBackDataHelp(update);
                 usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+                break;
+            case "Жалете оставить комментарий?\n Это может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?":
+                sendMessage = getCallBackDataComment(update);
+                setQuestion(update);
                 break;
         }
         return sendMessage;
@@ -102,7 +159,7 @@ public class MigrenBotService {
 
     private SendMessage helpChoice(Update update) {
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
         sendMessage.setText("Лекарство помогло от головной боли?");
 
         createKeyboard();
@@ -110,22 +167,15 @@ public class MigrenBotService {
         return sendMessage;
     }
 
-//    private SendMessage getCallBackDataHelp(Update update) {
-//        SendMessage sendMessage = new SendMessage();
-//        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-//        String callbackData = update.getCallbackQuery().getData();
-//        long chatId = update.getCallbackQuery().getMessage().getChatId();
-//
-//        switch (callbackData) {
-//            case "1":
-//                TabletsEntity
-//                break;
-//            case "0":
-//                sendMessage.setText("Запись успешно добавлена. До встречи завтра!");
-//
-//        }
-//        return sendMessage;
-//    }
+    private SendMessage commentChoice(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        sendMessage.setText("Жалете оставить комментарий?\n Это может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?");
+
+        createKeyboard();
+        sendMessage.setReplyMarkup(createKeyboard());
+        return sendMessage;
+    }
 
     private SendMessage getCallBackDataTablets(Update update) {
         SendMessage sendMessage = new SendMessage();
@@ -136,12 +186,9 @@ public class MigrenBotService {
         switch (callbackData) {
             case "1":
                 TabletsEntity tabletsEntity = new TabletsEntity();
-                LocalDateTime currentDate = LocalDateTime.now();
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-                String formattedDate = currentDate.format(formatter);
-                tabletsEntity.setSurveyId(surveyRepository.findIdByPainDate(formattedDate));
+                tabletsEntity.setSurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()));
                 tabletsRepository.save(tabletsEntity);
-                sendMessage.setText("Введите название лекарства:");
+                sendMessage = helpChoice(update);
                 break;
             case "0":
                 sendMessage.setText("Запись успешно добавлена. До встречи завтра!");
@@ -160,19 +207,64 @@ public class MigrenBotService {
             case "1":
                 SurveyEntity surveyEntity = new SurveyEntity();
                 surveyEntity.setChatId(update.getCallbackQuery().getMessage().getChatId());
-                LocalDateTime currentDate = LocalDateTime.now();
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-                String formattedDate = currentDate.format(formatter);
-                surveyEntity.setPainDate(formattedDate);
+                surveyEntity.setPainDate(getFormatDate());
                 surveyRepository.save(surveyEntity);
-
                 sendMessage = tabletsChoice(update);
                 break;
             case "0":
-                sendMessage.setText("Отлично, рад за Вас!");
+                sendMessage.setText("Отлично, завтра я спрошу Вас снова!");
                 break;
         }
         return sendMessage;
+    }
+
+    private SendMessage getCallBackDataHelp(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        String callbackData = update.getCallbackQuery().getData();
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+        switch (callbackData) {
+            case "1":
+                tabletsRepository.updateHelpBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), true);
+                sendMessage = commentChoice(update);
+                break;
+            case "0":
+                tabletsRepository.updateHelpBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), false);
+                sendMessage = commentChoice(update);
+                break;
+        }
+        return sendMessage;
+    }
+
+    private SendMessage getCallBackDataComment(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        String callbackData = update.getCallbackQuery().getData();
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+        switch (callbackData) {
+            case "1":
+            case "0":
+                sendMessage.setText("Запись успешно добавлена. До встречи завтра!");
+                break;
+        }
+        return sendMessage;
+    }
+
+    private void saveComment(Long surveyId, String comment) {
+        tabletsRepository.updateCommentBySurveyId(surveyId, comment);
+    }
+
+    private void setQuestion(Update update) {
+        String newLastQuestion = "";
+        usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+    }
+
+    private String getFormatDate() {
+        LocalDateTime currentDate = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        return currentDate.format(formatter);
     }
 
     private void createUser(Message message) {

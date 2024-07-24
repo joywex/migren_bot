@@ -1,0 +1,1 @@
+alter table tablets rename column name_tablets to comment;
