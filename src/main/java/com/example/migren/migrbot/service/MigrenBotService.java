@@ -6,6 +6,7 @@ import com.example.migren.migrbot.entity.UsersEntity;
 import com.example.migren.migrbot.repository.SurveyRepository;
 import com.example.migren.migrbot.repository.TabletsRepository;
 import com.example.migren.migrbot.repository.UsersRepository;
+import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -27,12 +28,11 @@ public class MigrenBotService {
     private final TabletsRepository tabletsRepository;
     private final UserCommentState userCommentState;
     private ConcurrentHashMap<Long, UserCommentState> userState;
+
+    @Getter
     public List<Integer> msgIdsList;
 
-    public String getChatIdForDeleteMsg() {
-        return chatIdForDeleteMsg;
-    }
-
+    @Getter
     private String chatIdForDeleteMsg;
 
     public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository, UserCommentState userCommentState) {

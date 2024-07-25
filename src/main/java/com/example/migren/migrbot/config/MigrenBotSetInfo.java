@@ -58,8 +58,8 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
     }
 
     public void deleteAllMessages() {
-        if (!migrenBotService.msgIdsList.isEmpty()) {
-            for (Integer messageId : migrenBotService.msgIdsList) {
+        if (!migrenBotService.getMsgIdsList().isEmpty()) {
+            for (Integer messageId : migrenBotService.getMsgIdsList()) {
                 DeleteMessage deleteMessage = new DeleteMessage();
                 deleteMessage.setChatId(migrenBotService.getChatIdForDeleteMsg());
                 deleteMessage.setMessageId(messageId);
