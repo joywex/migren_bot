@@ -1,5 +1,7 @@
 package com.example.migren.migrbot.service;
 
+import com.example.migren.migrbot.States.UserCommentState;
+import com.example.migren.migrbot.States.UserQuestionState;
 import com.example.migren.migrbot.entity.SurveyEntity;
 import com.example.migren.migrbot.entity.TabletsEntity;
 import com.example.migren.migrbot.entity.UsersEntity;
@@ -17,7 +19,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -27,7 +31,14 @@ public class MigrenBotService {
     private final UsersRepository usersRepository;
     private final TabletsRepository tabletsRepository;
     private final UserCommentState userCommentState;
+    private final UserQuestionState userQuestionState;
     private ConcurrentHashMap<Long, UserCommentState> userState;
+
+    @Getter
+    private final Map<Long, UserQuestionState> userQuestion;
+
+    @Getter
+    public List<Integer> msgIdsDeleteList;
 
     @Getter
     public List<Integer> msgIdsList;
@@ -35,13 +46,16 @@ public class MigrenBotService {
     @Getter
     private String chatIdForDeleteMsg;
 
-    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository, UserCommentState userCommentState) {
+    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository, UserCommentState userCommentState, UserQuestionState userQuestionState) {
         this.surveyRepository = surveyRepository;
         this.usersRepository = usersRepository;
         this.tabletsRepository = tabletsRepository;
         this.userCommentState = userCommentState;
+        this.userQuestionState = userQuestionState;
+        this.userQuestion = new HashMap<>();
         this.userState = new ConcurrentHashMap<>();
         this.msgIdsList = new ArrayList<>();
+        this.msgIdsDeleteList = new ArrayList<>();
     }
 
     public SendMessage sendMessage(Update update) {
@@ -112,24 +126,25 @@ public class MigrenBotService {
                 break;
             case "Принимали ли Вы лекарство?":
                 sendMessage = getCallBackDataTablets(update);
+                msgId = update.getCallbackQuery().getMessage().getMessageId();
+                msgIdsList.add(msgId);
                 if (tabletsRepository.existsBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()))) {
                     newLastQuestion = "Лекарство помогло от головной боли?";
                     usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
                 } else {
                     setQuestion(update);
                 }
-                msgId = update.getCallbackQuery().getMessage().getMessageId();
-                msgIdsList.add(msgId);
                 break;
             case "Лекарство помогло от головной боли?":
-                newLastQuestion = "Жалете оставить комментарий?\n Это может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?";
+                newLastQuestion = "Желаете оставить комментарий?\n\nЭто может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?";
                 sendMessage = getCallBackDataHelp(update);
                 usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
                 msgId = update.getCallbackQuery().getMessage().getMessageId();
                 msgIdsList.add(msgId);
                 break;
-            case "Жалете оставить комментарий?\n Это может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?":
+            case "Желаете оставить комментарий?\n\nЭто может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?":
                 sendMessage = getCallBackDataComment(update);
+                msgIdsDeleteList.add(msgId);
                 setQuestion(update);
                 msgId = update.getCallbackQuery().getMessage().getMessageId();
                 msgIdsList.add(msgId);
@@ -171,7 +186,8 @@ public class MigrenBotService {
     private SendMessage commentChoice(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-        sendMessage.setText("Жалете оставить комментарий?\n Это может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?");
+        sendMessage.setText("*Желаете оставить комментарий?*\n\nЭто может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?");
+        sendMessage.setParseMode("Markdown");
 
         createKeyboard();
         sendMessage.setReplyMarkup(createKeyboard());
@@ -190,9 +206,11 @@ public class MigrenBotService {
                 tabletsEntity.setSurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()));
                 tabletsRepository.save(tabletsEntity);
                 sendMessage = helpChoice(update);
+                updateUserQuestionState(chatId,"Принимал лекарство");
                 break;
             case "0":
                 sendMessage.setText("Запись успешно добавлена от " + getFormatDate() + ". До встречи завтра!");
+                updateUserQuestionState(chatId,"Не принимал лекарство");
 
         }
         return sendMessage;
@@ -211,13 +229,22 @@ public class MigrenBotService {
                 surveyEntity.setPainDate(getFormatDate());
                 surveyRepository.save(surveyEntity);
                 sendMessage = tabletsChoice(update);
+                updateUserQuestionState(chatId,"Голова болела");
                 break;
             case "0":
                 sendMessage.setText("Отлично, завтра я спрошу Вас снова!");
+                updateUserQuestionState(chatId,"Голова не болела");
                 break;
         }
         return sendMessage;
     }
+
+    private void updateUserQuestionState(long chatId, String lastQuestion) {
+        UserQuestionState state = userQuestion.getOrDefault(chatId, new UserQuestionState());
+        state.setLastQuestion(lastQuestion);
+        userQuestion.put(chatId, state);
+    }
+
 
     private SendMessage getCallBackDataHelp(Update update) {
         SendMessage sendMessage = new SendMessage();
@@ -229,10 +256,12 @@ public class MigrenBotService {
             case "1":
                 tabletsRepository.updateHelpBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), true);
                 sendMessage = commentChoice(update);
+                updateUserQuestionState(chatId,"Лекарство помогло");
                 break;
             case "0":
                 tabletsRepository.updateHelpBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), false);
                 sendMessage = commentChoice(update);
+                updateUserQuestionState(chatId,"Лекарство не помогло");
                 break;
         }
         return sendMessage;
@@ -249,12 +278,13 @@ public class MigrenBotService {
                 UserCommentState userCommentState = new UserCommentState();
                 userCommentState.setCurrentState("waiting_comment");
                 userState.put(chatId, userCommentState);
-                sendMessage.setText("Оставьте комментарий ниже или нажмите `Отмена`.");
+                sendMessage.setText("Оставьте комментарий ниже.");
                 break;
             case "0":
                 sendMessage.setText("Запись успешно добавлена от " + getFormatDate() + ". До встречи завтра!");
                 break;
         }
+        userQuestion.remove(chatId);
         return sendMessage;
     }
 

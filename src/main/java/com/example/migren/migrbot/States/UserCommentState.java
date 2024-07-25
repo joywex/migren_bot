@@ -1,4 +1,4 @@
-package com.example.migren.migrbot.service;
+package com.example.migren.migrbot.States;
 
 import lombok.Data;
 import org.springframework.stereotype.Component;
@@ -9,5 +9,4 @@ import org.springframework.stereotype.Component;
 public class UserCommentState {
 
     private String currentState;
-    private String comment;
 }
