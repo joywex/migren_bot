@@ -3,8 +3,12 @@ package com.example.migren.migrbot.config;
 import com.example.migren.migrbot.service.MigrenBotService;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class MigrenBotSetInfo extends TelegramLongPollingBot {
@@ -34,41 +38,69 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
                 execute(this.migrenBotService.firstMsg(update));
             }
             execute(this.migrenBotService.sendMessage(update));
+            scheduleMessageDeletion();
+//            deleteAllMessages();
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
     }
 
-//    @Override
-//    public void onUpdateReceived(Update update) {
-//        SendMessage sendMessage = this.migrenBotService.sendMessage(update);
-////            execute(this.migrenBotService.sendMessage(update));
-//        try {
-//            Message sentMessage = execute(sendMessage);// Отправка сообщения и сохранение отправленного сообщения
-//            int sentMessageId = sentMessage.getMessageId();
+    public void scheduleMessageDeletion() {
+        CompletableFuture.runAsync(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(2);
+                deleteAllMessages();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                e.printStackTrace();
+            }
+        });
+    }
+
+    public void deleteAllMessages() {
+        if (!migrenBotService.msgIdsList.isEmpty()) {
+            for (Integer messageId : migrenBotService.msgIdsList) {
+                DeleteMessage deleteMessage = new DeleteMessage();
+                deleteMessage.setChatId(migrenBotService.getChatIdForDeleteMsg());
+                deleteMessage.setMessageId(messageId);
+
+                try {
+                    execute(deleteMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace(); // Обработка исключений
+                }
+            }
+            migrenBotService.msgIdsList.clear(); // Очистка списка после удаления всех сообщений
+        }
+    }
+
+//    public void deleteAllMessages() {
+//        if (!migrenBotService.msgIdsList.isEmpty()) {
+//            for (Integer messageId : migrenBotService.msgIdsList) {
+//                DeleteMessage deleteMessage = new DeleteMessage();
+//                deleteMessage.setChatId(migrenBotService.getChatIdForDeleteMsg());
+//                deleteMessage.setMessageId(messageId);
 //
-//            // Пример удаления сообщения через 5 секунд
-//            new Timer().schedule(new TimerTask() {
-//                @Override
-//                public void run() {
-//                    deleteBotMessage(update.getMessage().getChatId(), sentMessageId);
+//                try {
+//                    execute(deleteMessage);
+//                } catch (TelegramApiException e) {
+//                    e.printStackTrace(); // Обработка исключений
 //                }
-//            }, 3000);
-//        } catch (TelegramApiException e) {
-//            e.printStackTrace();
+//            }
+//            migrenBotService.msgIdsList.clear(); // Очистка списка после удаления всех сообщений
 //        }
-//
-//
 //    }
 
-//    public void deleteBotMessage(long chatId, int messageId) {
-//        DeleteMessage deleteMessage = new DeleteMessage();
-//        deleteMessage.setChatId(String.valueOf(chatId));
-//        deleteMessage.setMessageId(messageId);
+//    public void replySheduled(String chatId, String message) {
 //        try {
-//            execute(deleteMessage);
+//            SendMessage sendMessage = new SendMessage();
+//            sendMessage.setChatId(chatId);
+//            sendMessage.setText(message);
+////            sendMessage.setParseMode("MarkdownV2");
+//            execute(sendMessage);
+//
 //        } catch (TelegramApiException e) {
-//            throw new RuntimeException(e);
+//            System.out.println(e.getMessage());
 //        }
 //    }
 

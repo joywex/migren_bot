@@ -1,6 +1,5 @@
 package com.example.migren.migrbot.service;
 
-import com.example.migren.migrbot.config.MigrenBotSetInfo;
 import com.example.migren.migrbot.entity.SurveyEntity;
 import com.example.migren.migrbot.entity.TabletsEntity;
 import com.example.migren.migrbot.entity.UsersEntity;
@@ -18,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class MigrenBotService {
@@ -25,11 +25,23 @@ public class MigrenBotService {
     private final SurveyRepository surveyRepository;
     private final UsersRepository usersRepository;
     private final TabletsRepository tabletsRepository;
+    private final UserCommentState userCommentState;
+    private ConcurrentHashMap<Long, UserCommentState> userState;
+    public List<Integer> msgIdsList;
 
-    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository) {
+    public String getChatIdForDeleteMsg() {
+        return chatIdForDeleteMsg;
+    }
+
+    private String chatIdForDeleteMsg;
+
+    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository, UserCommentState userCommentState) {
         this.surveyRepository = surveyRepository;
         this.usersRepository = usersRepository;
         this.tabletsRepository = tabletsRepository;
+        this.userCommentState = userCommentState;
+        this.userState = new ConcurrentHashMap<>();
+        this.msgIdsList = new ArrayList<>();
     }
 
     public SendMessage sendMessage(Update update) {
@@ -39,51 +51,31 @@ public class MigrenBotService {
         if (update.hasCallbackQuery()) {
             sendMessage = chooseCallbackData(update);
             chatId = update.getCallbackQuery().getMessage().getChatId();
-        } else if (update.hasMessage() && update.getMessage().hasText()) {
+        } else if (userState.containsKey(update.getMessage().getChatId())) {
+            chatId = update.getMessage().getChatId();
+            tabletsRepository.updateCommentBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), update.getMessage().getText());
+            userState.remove(chatId);
+            sendMessage.setChatId(String.valueOf(chatId));
+            sendMessage.setText("Ваш комментарий и запись успешно добавлены от " + getFormatDate() + ". Увидимся завтра.");
+        } else {
             chatId = update.getMessage().getChatId();
             String msg = update.getMessage().getText().toLowerCase();
-
-            if (msg != null && msg.trim().isEmpty()) {
-                saveComment(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), msg);
-                sendMessage.setChatId(String.valueOf(chatId));
-                sendMessage.setText("Комменатрий добавлен.");
-            } else {
-                switch (msg) {
-                    case "/start":
-                        createUser(update.getMessage());
-                        if (surveyRepository.findIdByChatIdAndPainDate(update.getMessage().getChatId(), getFormatDate()) == null) {
-                            sendMessage = painChoice(update.getMessage());
-                        } else {
-                            sendMessage.setChatId(String.valueOf(chatId));
-                            sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
-                        }
-                        break;
-                    default:
+            switch (msg) {
+                case "/start":
+                    createUser(update.getMessage());
+                    if (surveyRepository.findIdByChatIdAndPainDate(update.getMessage().getChatId(), getFormatDate()) == null) {
+                        sendMessage = painChoice(update.getMessage());
+                    } else {
                         sendMessage.setChatId(String.valueOf(chatId));
-                        sendMessage.setText("Нажмите на одну из кнопок.");
-                        break;
-                }
+                        sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
+                    }
+                    break;
+                default:
+                    sendMessage.setChatId(String.valueOf(chatId));
+                    sendMessage.setText("Нажмите на одну из кнопок.");
+                    break;
             }
-            
         }
-
-
-//        } else {
-//            switch (update.getMessage().getText().toLowerCase()) {
-//                case "/start":
-//                    createUser(update.getMessage());
-//                    if (surveyRepository.findIdByChatIdAndPainDate(update.getMessage().getChatId(), getFormatDate()) == null) {
-//                        sendMessage = painChoice(update.getMessage());
-//                    } else {
-//                        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-//                        sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
-//                    }
-//                    break;
-//                default:
-//                    sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-//                    sendMessage.setText("Нажмите на одну из кнопок.");
-//            }
-//        }
         return sendMessage;
     }
 
@@ -104,17 +96,19 @@ public class MigrenBotService {
     private SendMessage chooseCallbackData(Update update) {
         SendMessage sendMessage = new SendMessage();
         long chatId = update.getCallbackQuery().getMessage().getChatId();
+        chatIdForDeleteMsg = String.valueOf(chatId);
         String newLastQuestion = "";
         int msgId = update.getCallbackQuery().getMessage().getMessageId();
 
         switch (usersRepository.getLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId())) {
             case "":
                 sendMessage = getCallBackDataPain(update);
+                msgId = update.getCallbackQuery().getMessage().getMessageId();
+                msgIdsList.add(msgId);
                 if (surveyRepository.existsByChatIdAndPainDate(chatId, getFormatDate())) {
                     newLastQuestion = "Принимали ли Вы лекарство?";
                     usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
                 }
-
                 break;
             case "Принимали ли Вы лекарство?":
                 sendMessage = getCallBackDataTablets(update);
@@ -124,14 +118,21 @@ public class MigrenBotService {
                 } else {
                     setQuestion(update);
                 }
+                msgId = update.getCallbackQuery().getMessage().getMessageId();
+                msgIdsList.add(msgId);
                 break;
             case "Лекарство помогло от головной боли?":
+                newLastQuestion = "Жалете оставить комментарий?\n Это может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?";
                 sendMessage = getCallBackDataHelp(update);
                 usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+                msgId = update.getCallbackQuery().getMessage().getMessageId();
+                msgIdsList.add(msgId);
                 break;
             case "Жалете оставить комментарий?\n Это может быть как название лекарства, которое Вы принимали, так и описание причины и продолжительности головной боли?":
                 sendMessage = getCallBackDataComment(update);
                 setQuestion(update);
+                msgId = update.getCallbackQuery().getMessage().getMessageId();
+                msgIdsList.add(msgId);
                 break;
         }
         return sendMessage;
@@ -191,7 +192,7 @@ public class MigrenBotService {
                 sendMessage = helpChoice(update);
                 break;
             case "0":
-                sendMessage.setText("Запись успешно добавлена. До встречи завтра!");
+                sendMessage.setText("Запись успешно добавлена от " + getFormatDate() + ". До встречи завтра!");
 
         }
         return sendMessage;
@@ -245,8 +246,13 @@ public class MigrenBotService {
 
         switch (callbackData) {
             case "1":
+                UserCommentState userCommentState = new UserCommentState();
+                userCommentState.setCurrentState("waiting_comment");
+                userState.put(chatId, userCommentState);
+                sendMessage.setText("Оставьте комментарий ниже или нажмите `Отмена`.");
+                break;
             case "0":
-                sendMessage.setText("Запись успешно добавлена. До встречи завтра!");
+                sendMessage.setText("Запись успешно добавлена от " + getFormatDate() + ". До встречи завтра!");
                 break;
         }
         return sendMessage;
@@ -293,7 +299,6 @@ public class MigrenBotService {
         inlineKeyboardMarkup.setKeyboard(msgButtons);
         return inlineKeyboardMarkup;
     }
-
 
 
 }
