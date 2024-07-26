@@ -6,8 +6,10 @@ import com.example.migren.migrbot.service.MigrenBotService;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -62,53 +64,51 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
     public void editMsgs() {
         List<Integer> msgIds = migrenBotService.getMsgIdsList();
 
-        if (msgIds.isEmpty()) {
-            return;
-        }
+        if (!msgIds.isEmpty()) {
+            for (Map.Entry<Long, UserQuestionState> entry : migrenBotService.getUserQuestion().entrySet()) {
+                long chatId = entry.getKey();
+                UserQuestionState state = entry.getValue();
+                String question = state.getLastQuestion();
 
-        for (Map.Entry<Long, UserQuestionState> entry : migrenBotService.getUserQuestion().entrySet()) {
-            long chatId = entry.getKey();
-            UserQuestionState state = entry.getValue();
-            String question = state.getLastQuestion();
+                for (Integer messageId : msgIds) {
+                    EditMessageText editMessageText = new EditMessageText();
+                    editMessageText.setChatId(String.valueOf(chatId));
+                    editMessageText.setMessageId(messageId);
+                    editMessageText.setParseMode("Markdown");
 
-            for (Integer messageId : msgIds) {
-                EditMessageText editMessageText = new EditMessageText();
-                editMessageText.setChatId(String.valueOf(chatId));
-                editMessageText.setMessageId(messageId);
-                editMessageText.setParseMode("Markdown");
+                    switch (question) {
+                        case "Голова болела":
+                            editMessageText.setText("У вас сегодня болела голова?\n\n\n*Записал ответ:*\nБыла головная боль \uD83E\uDD74");
+                            break;
+                        case "Голова не болела":
+                            editMessageText.setText("У вас сегодня болела голова?\n\n\n*Записал ответ:*\nГоловной боли не было \uD83D\uDD25");
+                            break;
+                        case "Принимал лекарство":
+                            editMessageText.setText("Принимали ли Вы лекарство?\n\n\n*Записал ответ:*\nПринимал(а) лекарство \uD83D\uDC4D\uD83C\uDFFB");
+                            break;
+                        case "Не принимал лекарство":
+                            editMessageText.setText("Принимали ли Вы лекарство?\n\n\n*Записал ответ:*\nНе принимал(а) лекарство \uD83D\uDC4E\uD83C\uDFFB");
+                            break;
+                        case "Лекарство помогло":
+                            editMessageText.setText("Лекарство помогло от головной боли?\n\n\n*Записал ответ:*\nПомогло \uD83D\uDC4D\uD83C\uDFFB");
+                            break;
+                        case "Лекарство не помогло":
+                            editMessageText.setText("Лекарство помогло от головной боли?\n\n\n*Записал ответ:*\nНе помогло \uD83D\uDC4E\uD83C\uDFFB");
+                            break;
+                        default:
+                            editMessageText.setText("Неизвестный вопрос.");
+                            break;
+                    }
 
-                switch (question) {
-                    case "Голова болела":
-                        editMessageText.setText("У вас сегодня болела голова?\n\n\n*Записал ответ:*\nБыла головная боль \uD83E\uDD74");
-                        break;
-                    case "Голова не болела":
-                        editMessageText.setText("У вас сегодня болела голова?\n\n\n*Записал ответ:*\nГоловной боли не было \uD83D\uDD25");
-                        break;
-                    case "Принимал лекарство":
-                        editMessageText.setText("Принимали ли Вы лекарство?\n\n\n*Записал ответ:*\nПринимал(а) лекарство \uD83D\uDC4D\uD83C\uDFFB");
-                        break;
-                    case "Не принимал лекарство":
-                        editMessageText.setText("Принимали ли Вы лекарство?\n\n\n*Записал ответ:*\nНе принимал(а) лекарство \uD83D\uDC4E\uD83C\uDFFB");
-                        break;
-                    case "Лекарство помогло":
-                        editMessageText.setText("Лекарство помогло от головной боли?\n\n\n*Записал ответ:*\nПомогло \uD83D\uDC4D\uD83C\uDFFB");
-                        break;
-                    case "Лекарство не помогло":
-                        editMessageText.setText("Лекарство помогло от головной боли?\n\n\n*Записал ответ:*\nНе помогло \uD83D\uDC4E\uD83C\uDFFB");
-                        break;
-                    default:
-                        editMessageText.setText("Неизвестный вопрос.");
-                        break;
-                }
-
-                try {
-                    execute(editMessageText);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
+                    try {
+                        execute(editMessageText);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
+            migrenBotService.getMsgIdsList().clear();
         }
-        migrenBotService.getMsgIdsList().clear();
     }
 
 //    public void editMsgs() {
@@ -208,6 +208,16 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
 
         // Очищаем список после удаления всех сообщений
         migrenBotService.getMsgIdsDeleteList().clear();
+    }
+
+    public void replySheduled(SendMessage sendMessage) {
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
 
 }

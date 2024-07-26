@@ -153,7 +153,7 @@ public class MigrenBotService {
         return sendMessage;
     }
 
-    private SendMessage painChoice(Message message) {
+    public SendMessage painChoice(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
         sendMessage.setText("У вас сегодня болела голова?");
