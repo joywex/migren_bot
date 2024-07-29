@@ -14,6 +14,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class MigrenBotService {
     private final SurveyRepository surveyRepository;
     private final UsersRepository usersRepository;
     private final TabletsRepository tabletsRepository;
-    private ConcurrentHashMap<Long, String> userState;
+    private final ConcurrentHashMap<Long, String> userState;
 
     @Getter
     private final ConcurrentHashMap<Long, String> userQuestion;
@@ -71,15 +72,19 @@ public class MigrenBotService {
                 case "/start":
                     createUser(update.getMessage());
                     if (surveyRepository.findIdByChatIdAndPainDate(update.getMessage().getChatId(), getFormatDate()) == null) {
-                        sendMessage = painChoice(update.getMessage());
+//                        sendMessage = painChoice(update);
+                        sendMessage = firstMsg(update);
                     } else {
                         sendMessage.setChatId(String.valueOf(chatId));
                         sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
                     }
                     break;
+                case "/add_note":
+                    sendMessage = noteChoice(update.getMessage());
+                    break;
                 default:
                     sendMessage.setChatId(String.valueOf(chatId));
-                    sendMessage.setText("Нажмите на одну из кнопок.");
+                    sendMessage.setText("Воспользуйтесь одной из команд меню, чтобы использовать все доступные функции бота.");
                     break;
             }
         }
@@ -89,7 +94,7 @@ public class MigrenBotService {
     public SendMessage firstMsg(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        sendMessage.setText("Добро пожаловать!");
+        sendMessage.setText("Добро пожаловать!\n\n Use /add_note to put note");
         return sendMessage;
     }
 
@@ -142,13 +147,42 @@ public class MigrenBotService {
                 msgId = update.getCallbackQuery().getMessage().getMessageId();
                 msgIdsList.add(msgId);
                 break;
+            case "Выбор записи":
+                sendMessage = getCallbackDataNoteChoice(update);
+                msgIdsDeleteList.add(msgId);
+                break;
+            case "Выбор даты записи":
+                sendMessage = getCallBackDataDateChoice(update);
+                msgIdsDeleteList.add(msgId);
+                break;
+
         }
         return sendMessage;
     }
 
-    public SendMessage painChoice(Message message) {
+    private SendMessage noteChoice(Message message) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
+        sendMessage.setText("Запись в дневник головной боли.\n\nЗапись на какой день Вы хотели бы сделать? Ниже нажмите на одну из кнопок в соответствии с Вашим запросом.");
+        createMonthKeyboard();
+        sendMessage.setReplyMarkup(createNoteKeyboard());
+
+        usersRepository.updateLastQuestionByChatId(message.getChatId(), "Выбор записи");
+        return sendMessage;
+    }
+
+    private SendMessage dateChoice(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        sendMessage.setText("Запись на прошедшие дни.\n\nВыберите день этого месяца, где Вы хотите добавить запись о головной боли.");
+        createMonthKeyboard();
+        sendMessage.setReplyMarkup(createMonthKeyboard());
+        return sendMessage;
+    }
+
+    public SendMessage painChoice(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
         sendMessage.setText("У вас сегодня болела голова?");
         createKeyboard();
         sendMessage.setReplyMarkup(createKeyboard());
@@ -276,6 +310,41 @@ public class MigrenBotService {
         return sendMessage;
     }
 
+    private SendMessage getCallbackDataNoteChoice(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        String callbackData = update.getCallbackQuery().getData();
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+        switch (callbackData) {
+            case "0":
+                if (surveyRepository.findIdByChatIdAndPainDate(update.getCallbackQuery().getMessage().getChatId(), getFormatDate()) == null) {
+                        sendMessage = painChoice(update);
+                } else {
+                    sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
+                }
+                usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), "");
+                break;
+            case "1":
+                sendMessage = dateChoice(update);
+                usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), "Выбор даты записи");
+        }
+        return sendMessage;
+    }
+
+    private SendMessage getCallBackDataDateChoice(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        String callbackData = update.getCallbackQuery().getData();
+
+        switch (callbackData) {
+            case "0":
+                sendMessage.setText("Вы отменили запись на прошедшие дни. Можете создать запись снова, используя команды из меню.");
+                usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), "");
+        }
+        return sendMessage;
+    }
+
     private void saveComment(Long surveyId, String comment) {
         tabletsRepository.updateCommentBySurveyId(surveyId, comment);
     }
@@ -303,16 +372,71 @@ public class MigrenBotService {
     private InlineKeyboardMarkup createKeyboard() {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
-
         List<InlineKeyboardButton> row = new ArrayList<>();
+
         InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
         inlineKeyboardButton.setText("Да");
         inlineKeyboardButton.setCallbackData("1");
         row.add(inlineKeyboardButton);
+
         InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
         inlineKeyboardButton1.setText("Нет");
         inlineKeyboardButton1.setCallbackData("0");
         row.add(inlineKeyboardButton1);
+
+        msgButtons.add(row);
+        inlineKeyboardMarkup.setKeyboard(msgButtons);
+        return inlineKeyboardMarkup;
+    }
+
+    private InlineKeyboardMarkup createNoteKeyboard() {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+        inlineKeyboardButton.setText("Сегодняшний день");
+        inlineKeyboardButton.setCallbackData("0");
+        row1.add(inlineKeyboardButton);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
+        inlineKeyboardButton1.setText("Любой предыдущий день");
+        inlineKeyboardButton1.setCallbackData("1");
+        row2.add(inlineKeyboardButton1);
+
+        msgButtons.add(row1);
+        msgButtons.add(row2);
+        inlineKeyboardMarkup.setKeyboard(msgButtons);
+        return inlineKeyboardMarkup;
+    }
+
+    private InlineKeyboardMarkup createMonthKeyboard() {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+
+        String dateStr = getFormatDate();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        LocalDate date = LocalDate.parse(dateStr, formatter);
+
+        for (int i = 1; i < date.getDayOfMonth(); i++) {
+            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+            inlineKeyboardButton.setText(String.valueOf(i));
+            inlineKeyboardButton.setCallbackData(String.valueOf(i));
+            row.add(inlineKeyboardButton);
+
+            if (i % 7 == 0) {
+                msgButtons.add(row);
+                row = new ArrayList<>();
+            }
+        }
+
+        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+        inlineKeyboardButton.setText("Отмена");
+        inlineKeyboardButton.setCallbackData("0");
+        row.add(inlineKeyboardButton);
+
         msgButtons.add(row);
         inlineKeyboardMarkup.setKeyboard(msgButtons);
         return inlineKeyboardMarkup;

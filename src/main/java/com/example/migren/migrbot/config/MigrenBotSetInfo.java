@@ -46,9 +46,9 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         try {
-            if (!migrenBotService.hasUser(update.getMessage())) {
-                execute(this.migrenBotService.firstMsg(update));
-            }
+//            if (!migrenBotService.hasUser(update.getMessage())) {
+//                execute(this.migrenBotService.firstMsg(update));
+//            }
             execute(this.migrenBotService.sendMessage(update));
             editMsgs();
             if (!migrenBotService.getMsgIdsDeleteList().isEmpty()) {
@@ -111,8 +111,8 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
     private void initCommands() {
         List<BotCommand> botCommands = new ArrayList<>();
         botCommands.add(new BotCommand("/start", "Запуск бота"));
-        botCommands.add(new BotCommand("/addnote", "Добавить запись о головной боли в дневник"));
-        botCommands.add(new BotCommand("/mynotes", "Посмотреть записи в дневнике"));
+        botCommands.add(new BotCommand("/add_note", "Добавить запись о головной боли в дневник"));
+        botCommands.add(new BotCommand("/my_notes", "Посмотреть записи в дневнике"));
 
         SetMyCommands setMyCommands = new SetMyCommands();
         setMyCommands.setCommands(botCommands);

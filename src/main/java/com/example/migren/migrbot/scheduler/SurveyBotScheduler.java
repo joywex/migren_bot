@@ -27,19 +27,19 @@ public class SurveyBotScheduler {
         this.surveyRepository = surveyRepository;
     }
 
-    @Scheduled(fixedDelay = 60000)
-    @Transactional
-    public void startChoice() {
-        List<Long> getAllChatId = usersRepository.findAllChatId();
-
-        for (Long chatId : getAllChatId) {
-            if (!surveyRepository.existsByChatIdAndPainDate(chatId, migrenBotService.getFormatDate())) {
-                Message message = new Message();
-                Chat chat = new Chat();
-                chat.setId(chatId);
-                message.setChat(chat);
-                migrenBotSetInfo.replySheduled(migrenBotService.painChoice(message));
-            }
-        }
-    }
+//    @Scheduled(fixedDelay = 60000)
+//    @Transactional
+//    public void startChoice() {
+//        List<Long> getAllChatId = usersRepository.findAllChatId();
+//
+//        for (Long chatId : getAllChatId) {
+//            if (!surveyRepository.existsByChatIdAndPainDate(chatId, migrenBotService.getFormatDate())) {
+//                Message message = new Message();
+//                Chat chat = new Chat();
+//                chat.setId(chatId);
+//                message.setChat(chat);
+//                migrenBotSetInfo.replySheduled(migrenBotService.painChoice(message));
+//            }
+//        }
+//    }
 }
