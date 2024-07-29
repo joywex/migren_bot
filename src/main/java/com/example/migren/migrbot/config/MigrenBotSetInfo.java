@@ -1,6 +1,5 @@
 package com.example.migren.migrbot.config;
 
-import com.example.migren.migrbot.States.UserQuestionState;
 import com.example.migren.migrbot.repository.UsersRepository;
 import com.example.migren.migrbot.service.MigrenBotService;
 import org.springframework.stereotype.Component;
@@ -9,7 +8,6 @@ import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -65,10 +63,9 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
         List<Integer> msgIds = migrenBotService.getMsgIdsList();
 
         if (!msgIds.isEmpty()) {
-            for (Map.Entry<Long, UserQuestionState> entry : migrenBotService.getUserQuestion().entrySet()) {
+            for (Map.Entry<Long, String> entry : migrenBotService.getUserQuestion().entrySet()) {
                 long chatId = entry.getKey();
-                UserQuestionState state = entry.getValue();
-                String question = state.getLastQuestion();
+                String question = entry.getValue();
 
                 for (Integer messageId : msgIds) {
                     EditMessageText editMessageText = new EditMessageText();
@@ -110,53 +107,6 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
             migrenBotService.getMsgIdsList().clear();
         }
     }
-
-//    public void editMsgs() {
-//        for (Map.Entry<Long, UserQuestionState> entry : migrenBotService.getUserQuestion().entrySet()) {
-//            long chatId = entry.getKey();
-//            UserQuestionState state = entry.getValue();
-//
-//            List<Integer> msgIds = migrenBotService.getMsgIdsList();
-//            if (!msgIds.isEmpty()) {
-//                String question = state.getLastQuestion();
-//                for (Integer messageId : msgIds) {
-//                    EditMessageText editMessageText = new EditMessageText();
-//                    editMessageText.setChatId(String.valueOf(chatId));
-//                    editMessageText.setMessageId(messageId);
-//
-//                    switch (question) {
-//                        case "Голова болела":
-//                            editMessageText.setText("У вас сегодня болела голова?\n\n\nЗаписал ответ: была головная боль \uD83E\uDD74");
-//                            break;
-//                        case "Голова не болела":
-//                            editMessageText.setText("У вас сегодня болела голова?\n\n\nЗаписал ответ: головной боли не было \uD83D\uDD25");
-//                            break;
-//                        case "Принимал лекарство":
-//                            editMessageText.setText("Принимали ли Вы лекарство?\n\n\nЗаписал ответ: принимал лекарство \uD83D\uDC4D\uD83C\uDFFB");
-//                            break;
-//                        case "Не принимал лекарство":
-//                            editMessageText.setText("Принимали ли Вы лекарство?\n\n\nЗаписал ответ: не принимал лекарство \uD83D\uDC4E\uD83C\uDFFB");
-//                            break;
-//                        case "Лекарство помогло":
-//                            editMessageText.setText("Лекарство помогло от головной боли?\n\n\nЗаписал ответ: помогло \uD83D\uDC4D\uD83C\uDFFB");
-//                            break;
-//                        case "Лекарство не помогло":
-//                            editMessageText.setText("Лекарство помогло от головной боли?\n\n\nЗаписал ответ: не помогло \uD83D\uDC4E\uD83C\uDFFB");
-//                            break;
-//                        default:
-//                            editMessageText.setText("Неизвестный вопрос.");
-//                            break;
-//                    }
-//                    try {
-//                        execute(editMessageText);
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//                msgIds.clear();
-//            }
-//        }
-//    }
 
     private void initCommands() {
         List<BotCommand> botCommands = new ArrayList<>();

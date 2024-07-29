@@ -1,7 +1,5 @@
 package com.example.migren.migrbot.service;
 
-import com.example.migren.migrbot.States.UserCommentState;
-import com.example.migren.migrbot.States.UserQuestionState;
 import com.example.migren.migrbot.entity.SurveyEntity;
 import com.example.migren.migrbot.entity.TabletsEntity;
 import com.example.migren.migrbot.entity.UsersEntity;
@@ -19,9 +17,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -30,12 +27,10 @@ public class MigrenBotService {
     private final SurveyRepository surveyRepository;
     private final UsersRepository usersRepository;
     private final TabletsRepository tabletsRepository;
-    private final UserCommentState userCommentState;
-    private final UserQuestionState userQuestionState;
-    private ConcurrentHashMap<Long, UserCommentState> userState;
+    private ConcurrentHashMap<Long, String> userState;
 
     @Getter
-    private final Map<Long, UserQuestionState> userQuestion;
+    private final ConcurrentHashMap<Long, String> userQuestion;
 
     @Getter
     public List<Integer> msgIdsDeleteList;
@@ -46,16 +41,14 @@ public class MigrenBotService {
     @Getter
     private String chatIdForDeleteMsg;
 
-    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository, UserCommentState userCommentState, UserQuestionState userQuestionState) {
+    public MigrenBotService(SurveyRepository surveyRepository, UsersRepository usersRepository, TabletsRepository tabletsRepository) {
         this.surveyRepository = surveyRepository;
         this.usersRepository = usersRepository;
         this.tabletsRepository = tabletsRepository;
-        this.userCommentState = userCommentState;
-        this.userQuestionState = userQuestionState;
-        this.userQuestion = new HashMap<>();
+        this.userQuestion = new ConcurrentHashMap<>();
         this.userState = new ConcurrentHashMap<>();
-        this.msgIdsList = new ArrayList<>();
-        this.msgIdsDeleteList = new ArrayList<>();
+        this.msgIdsList = Collections.synchronizedList(new ArrayList<>());
+        this.msgIdsDeleteList = Collections.synchronizedList(new ArrayList<>());
     }
 
     public SendMessage sendMessage(Update update) {
@@ -157,7 +150,6 @@ public class MigrenBotService {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
         sendMessage.setText("У вас сегодня болела голова?");
-
         createKeyboard();
         sendMessage.setReplyMarkup(createKeyboard());
         return sendMessage;
@@ -206,11 +198,11 @@ public class MigrenBotService {
                 tabletsEntity.setSurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()));
                 tabletsRepository.save(tabletsEntity);
                 sendMessage = helpChoice(update);
-                updateUserQuestionState(chatId,"Принимал лекарство");
+                updateUserQuestionState(chatId, "Принимал лекарство");
                 break;
             case "0":
                 sendMessage.setText("Запись успешно добавлена от " + getFormatDate() + ". До встречи завтра!");
-                updateUserQuestionState(chatId,"Не принимал лекарство");
+                updateUserQuestionState(chatId, "Не принимал лекарство");
 
         }
         return sendMessage;
@@ -229,20 +221,18 @@ public class MigrenBotService {
                 surveyEntity.setPainDate(getFormatDate());
                 surveyRepository.save(surveyEntity);
                 sendMessage = tabletsChoice(update);
-                updateUserQuestionState(chatId,"Голова болела");
+                updateUserQuestionState(chatId, "Голова болела");
                 break;
             case "0":
                 sendMessage.setText("Отлично, завтра я спрошу Вас снова!");
-                updateUserQuestionState(chatId,"Голова не болела");
+                updateUserQuestionState(chatId, "Голова не болела");
                 break;
         }
         return sendMessage;
     }
 
     private void updateUserQuestionState(long chatId, String lastQuestion) {
-        UserQuestionState state = userQuestion.getOrDefault(chatId, new UserQuestionState());
-        state.setLastQuestion(lastQuestion);
-        userQuestion.put(chatId, state);
+        userQuestion.put(chatId, lastQuestion);
     }
 
 
@@ -256,12 +246,12 @@ public class MigrenBotService {
             case "1":
                 tabletsRepository.updateHelpBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), true);
                 sendMessage = commentChoice(update);
-                updateUserQuestionState(chatId,"Лекарство помогло");
+                updateUserQuestionState(chatId, "Лекарство помогло");
                 break;
             case "0":
                 tabletsRepository.updateHelpBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()), false);
                 sendMessage = commentChoice(update);
-                updateUserQuestionState(chatId,"Лекарство не помогло");
+                updateUserQuestionState(chatId, "Лекарство не помогло");
                 break;
         }
         return sendMessage;
@@ -275,9 +265,7 @@ public class MigrenBotService {
 
         switch (callbackData) {
             case "1":
-                UserCommentState userCommentState = new UserCommentState();
-                userCommentState.setCurrentState("waiting_comment");
-                userState.put(chatId, userCommentState);
+                userState.put(chatId, "waiting_comment");
                 sendMessage.setText("Оставьте комментарий ниже.");
                 break;
             case "0":
@@ -297,7 +285,7 @@ public class MigrenBotService {
         usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
     }
 
-    private String getFormatDate() {
+    public String getFormatDate() {
         LocalDateTime currentDate = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         return currentDate.format(formatter);
