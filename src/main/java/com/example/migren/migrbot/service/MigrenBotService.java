@@ -80,7 +80,7 @@ public class MigrenBotService {
                     }
                     break;
                 case "/add_note":
-                    sendMessage = noteChoice(update.getMessage());
+                    sendMessage = noteChoice(update);
                     break;
                 default:
                     sendMessage.setChatId(String.valueOf(chatId));
@@ -160,14 +160,14 @@ public class MigrenBotService {
         return sendMessage;
     }
 
-    private SendMessage noteChoice(Message message) {
+    private SendMessage noteChoice(Update update) {
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(message.getChatId()));
+        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
         sendMessage.setText("Запись в дневник головной боли.\n\nЗапись на какой день Вы хотели бы сделать? Ниже нажмите на одну из кнопок в соответствии с Вашим запросом.");
-        createMonthKeyboard();
+        createMonthKeyboard(update);
         sendMessage.setReplyMarkup(createNoteKeyboard());
 
-        usersRepository.updateLastQuestionByChatId(message.getChatId(), "Выбор записи");
+        usersRepository.updateLastQuestionByChatId(update.getMessage().getChatId(), "Выбор записи");
         return sendMessage;
     }
 
@@ -175,8 +175,8 @@ public class MigrenBotService {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
         sendMessage.setText("Запись на прошедшие дни.\n\nВыберите день этого месяца, где Вы хотите добавить запись о головной боли.");
-        createMonthKeyboard();
-        sendMessage.setReplyMarkup(createMonthKeyboard());
+        createMonthKeyboard(update);
+        sendMessage.setReplyMarkup(createMonthKeyboard(update));
         return sendMessage;
     }
 
@@ -411,7 +411,7 @@ public class MigrenBotService {
         return inlineKeyboardMarkup;
     }
 
-    private InlineKeyboardMarkup createMonthKeyboard() {
+    private InlineKeyboardMarkup createMonthKeyboard(Update update) {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
@@ -422,7 +422,12 @@ public class MigrenBotService {
 
         for (int i = 1; i < date.getDayOfMonth(); i++) {
             InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-            inlineKeyboardButton.setText(String.valueOf(i));
+            // метод для фикса ошибки следом
+            if (surveyRepository.existsByChatIdAndPainDate(getChatId(update), dateConverter(i))) {
+                inlineKeyboardButton.setText(i + "\uD83D\uDD3A");
+            } else {
+                inlineKeyboardButton.setText(String.valueOf(i));
+            }
             inlineKeyboardButton.setCallbackData(String.valueOf(i));
             row.add(inlineKeyboardButton);
 
@@ -440,6 +445,23 @@ public class MigrenBotService {
         msgButtons.add(row);
         inlineKeyboardMarkup.setKeyboard(msgButtons);
         return inlineKeyboardMarkup;
+    }
+
+    public Long getChatId(Update update) {
+        Long chatId;
+        if (update.getMessage() == null) {
+            chatId = update.getCallbackQuery().getMessage().getChatId();
+        }else {
+            chatId = update.getMessage().getChatId();
+        }
+        return chatId;
+    }
+
+    public String dateConverter(int day) {
+        LocalDate currentDate = LocalDate.now();
+        LocalDate newDate = currentDate.withDayOfMonth(day);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        return newDate.format(formatter);
     }
 
 
