@@ -438,29 +438,32 @@ public class MigrenBotService {
         List<List<InlineKeyboardButton>> msgButtons = new ArrayList<>();
 
         List<InlineKeyboardButton> row1 = new ArrayList<>();
-        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-        inlineKeyboardButton.setText("Сегодняшний день");
-        inlineKeyboardButton.setCallbackData("0");
-        row1.add(inlineKeyboardButton);
+        InlineKeyboardButton buttonToday = new InlineKeyboardButton();
+        buttonToday.setText("Сегодняшний день");
+        buttonToday.setCallbackData("0");
+        row1.add(buttonToday);
 
         List<InlineKeyboardButton> row2 = new ArrayList<>();
-        InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
-        inlineKeyboardButton.setText("Вчерашний день");
-        inlineKeyboardButton.setCallbackData("0");
-        row1.add(inlineKeyboardButton1);
+        InlineKeyboardButton buttonYesterday = new InlineKeyboardButton();
+        buttonYesterday.setText("Вчерашний день");
+        buttonYesterday.setCallbackData("2");
+        row2.add(buttonYesterday);
 
         List<InlineKeyboardButton> row3 = new ArrayList<>();
-        InlineKeyboardButton inlineKeyboardButton2 = new InlineKeyboardButton();
-        inlineKeyboardButton1.setText("Любой предыдущий день");
-        inlineKeyboardButton1.setCallbackData("1");
-        row2.add(inlineKeyboardButton2);
+        InlineKeyboardButton buttonAnyPrevious = new InlineKeyboardButton();
+        buttonAnyPrevious.setText("Любой предыдущий день");
+        buttonAnyPrevious.setCallbackData("1");
+        row3.add(buttonAnyPrevious);
 
         msgButtons.add(row1);
         msgButtons.add(row2);
         msgButtons.add(row3);
+
         inlineKeyboardMarkup.setKeyboard(msgButtons);
+
         return inlineKeyboardMarkup;
     }
+
 
     private InlineKeyboardMarkup createMonthKeyboard(Update update) {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
