@@ -132,7 +132,7 @@ public class MigrenBotService {
                 sendMessage = getCallBackDataPain(update, userPainDate.get(chatId));
                 msgId = update.getCallbackQuery().getMessage().getMessageId();
                 msgIdsList.add(msgId);
-                if (surveyRepository.existsByChatIdAndPainDate(chatId, getFormatDate())) {
+                if (surveyRepository.existsByChatIdAndPainDate(chatId, userPainDate.get(chatId))) {
                     newLastQuestion = "Принимали ли Вы лекарство?";
                     usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
                 }
@@ -141,7 +141,7 @@ public class MigrenBotService {
                 sendMessage = getCallBackDataTablets(update);
                 msgId = update.getCallbackQuery().getMessage().getMessageId();
                 msgIdsList.add(msgId);
-                if (tabletsRepository.existsBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, getFormatDate()))) {
+                if (tabletsRepository.existsBySurveyId(surveyRepository.findIdByChatIdAndPainDate(chatId, userPainDate.get(chatId)))) {
                     newLastQuestion = "Лекарство помогло от головной боли?";
                     usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
                 } else {
