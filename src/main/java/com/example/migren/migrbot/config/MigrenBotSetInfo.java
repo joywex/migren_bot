@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -113,6 +114,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
         botCommands.add(new BotCommand("/start", "Запуск бота"));
         botCommands.add(new BotCommand("/add_note", "Добавить запись о головной боли в дневник"));
         botCommands.add(new BotCommand("/my_notes", "Посмотреть записи в дневнике"));
+        botCommands.add(new BotCommand("/feedback", "Обратная связь"));
 
         SetMyCommands setMyCommands = new SetMyCommands();
         setMyCommands.setCommands(botCommands);

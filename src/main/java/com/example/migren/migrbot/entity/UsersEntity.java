@@ -13,4 +13,5 @@ public class UsersEntity {
     private Long id;
     private Long chatId;
     private String lastQuestion;
+    private String feedback;
 }

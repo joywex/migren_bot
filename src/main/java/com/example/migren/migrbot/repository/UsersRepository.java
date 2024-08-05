@@ -27,4 +27,9 @@ public interface UsersRepository extends JpaRepository<UsersEntity, Long> {
     @Transactional
     @Query(value = "update UsersEntity s set s.lastQuestion =:newLastQuestion where s.chatId =:chatId")
     void updateLastQuestionByChatId(@Param("chatId") Long chatId, @Param("newLastQuestion") String lastQuestion);
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE UsersEntity s SET s.feedback = CONCAT(COALESCE(s.feedback, ''), ' // ', :newFeedback) WHERE s.chatId = :chatId")
+    void updateFeedbackByChatId(@Param("chatId") Long chatId, @Param("newFeedback") String feedback);
 }
