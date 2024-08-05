@@ -76,10 +76,10 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
 
                     switch (question) {
                         case "Голова болела":
-                            editMessageText.setText("У вас сегодня болела голова?\n\n\n*Записал ответ:*\nБыла головная боль \uD83E\uDD74");
+                            editMessageText.setText("У вас болела голова?\n\n\n*Записал ответ:*\nБыла головная боль \uD83E\uDD74");
                             break;
                         case "Голова не болела":
-                            editMessageText.setText("У вас сегодня болела голова?\n\n\n*Записал ответ:*\nГоловной боли не было \uD83D\uDD25");
+                            editMessageText.setText("У вас болела голова?\n\n\n*Записал ответ:*\nГоловной боли не было \uD83D\uDD25");
                             break;
                         case "Принимал лекарство":
                             editMessageText.setText("Принимали ли Вы лекарство?\n\n\n*Записал ответ:*\nПринимал(а) лекарство \uD83D\uDC4D\uD83C\uDFFB");

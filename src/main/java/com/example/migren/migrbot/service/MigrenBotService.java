@@ -9,6 +9,8 @@ import com.example.migren.migrbot.repository.UsersRepository;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -74,19 +76,13 @@ public class MigrenBotService {
             userState.remove(chatId);
             sendMessage.setChatId(String.valueOf(chatId));
             sendMessage.setText("Благодарим за обращение! Мы записали Ваш отзыв.");
-        }else {
+        } else {
             chatId = update.getMessage().getChatId();
             String msg = update.getMessage().getText().toLowerCase();
             switch (msg) {
                 case "/start":
                     createUser(update.getMessage());
-                    if (surveyRepository.findIdByChatIdAndPainDate(update.getMessage().getChatId(), getFormatDate()) == null) {
-//                        sendMessage = painChoice(update);
-                        sendMessage = firstMsg(update);
-                    } else {
-                        sendMessage.setChatId(String.valueOf(chatId));
-                        sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
-                    }
+                    sendMessage = firstMsg(update);
                     break;
                 case "/add_note":
                     sendMessage = noteChoice(update);
@@ -111,7 +107,9 @@ public class MigrenBotService {
     public SendMessage firstMsg(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        sendMessage.setText("Добро пожаловать!\n\n Use /add_note to put note");
+        sendMessage.setText("Добро пожаловать в бота!\n\nТы можешь вести дневник головной боли, добавляя записи и комментарии каждый день.\n\nСписок доступных команд:" +
+                "\n/add_note - создать запись в дневнике головной боли\n/my_notes - отобразить записи в дневнике\n/feedback - оставить отзыв/пожелание по работе бота\n\nЛюбую из этих команд Вы" +
+                "всегда можете найти и вызвать из 'Меню' слева.\n\nСпасибо, что выбрали нас!");
         return sendMessage;
     }
 
@@ -174,7 +172,8 @@ public class MigrenBotService {
                 break;
             case "Календарь":
                 sendMessage = getCallBackDataCalendar(update);
-//                msgIdsDeleteList.add(msgId);
+                setQuestion(update);
+                msgIdsDeleteList.add(msgId);
                 break;
 
         }
@@ -184,7 +183,8 @@ public class MigrenBotService {
     private SendMessage noteChoice(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        sendMessage.setText("Запись в дневник головной боли.\n\nЗапись на какой день Вы хотели бы сделать? Ниже нажмите на одну из кнопок в соответствии с Вашим запросом.");
+        sendMessage.setText("*Запись в дневник головной боли.*\n\nЗапись на какой день Вы хотели бы сделать? Ниже нажмите на одну из кнопок в соответствии с Вашим запросом.");
+        sendMessage.setParseMode("Markdown");
         createMonthKeyboard(update);
         sendMessage.setReplyMarkup(createNoteKeyboard());
 
@@ -195,7 +195,8 @@ public class MigrenBotService {
     private SendMessage painDateCalendar(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        sendMessage.setText("Ваш календарь головной боли за этот месяц.\n\nВсе кнопки носят информативный характер. В них не заложены какие-либо функции.");
+        sendMessage.setText("*Ваш календарь головной боли за этот месяц.*\n\nВсе кнопки носят информативный характер. В них не заложены какие-либо функции.\n\n \uD83D\uDD3A _- отметка о наличии в этот день головной боли_");
+        sendMessage.setParseMode("Markdown");
         createPainDateKeyboard(update);
         sendMessage.setReplyMarkup(createPainDateKeyboard(update));
 
@@ -206,7 +207,8 @@ public class MigrenBotService {
     private SendMessage dateChoice(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-        sendMessage.setText("Запись на прошедшие дни.\n\nВыберите день этого месяца, где Вы хотите добавить запись о головной боли.");
+        sendMessage.setText("*Запись на прошедшие дни.*\n\nВыберите день этого месяца, где Вы хотите добавить запись о головной боли.\n\n \uD83D\uDD3A _- отметка о наличии в этот день головной боли_");
+        sendMessage.setParseMode("Markdown");
         createMonthKeyboard(update);
         sendMessage.setReplyMarkup(createMonthKeyboard(update));
         return sendMessage;
@@ -215,7 +217,7 @@ public class MigrenBotService {
     public SendMessage painChoice(Update update, String date) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-        sendMessage.setText("У вас болела голова?");
+        sendMessage.setText("У вас болела голова?\n\nЗапись создаётся на " + date);
         createKeyboard();
         sendMessage.setReplyMarkup(createKeyboard());
         userPainDate.put(getChatId(update), date);
@@ -270,7 +272,9 @@ public class MigrenBotService {
             case "0":
                 sendMessage.setText("Запись успешно добавлена от " + userPainDate.get(chatId) + ". До встречи завтра!");
                 userPainDate.remove(chatId);
+                setQuestion(update);
                 updateUserQuestionState(chatId, "Не принимал лекарство");
+                break;
 
         }
         return sendMessage;
@@ -292,6 +296,7 @@ public class MigrenBotService {
                 updateUserQuestionState(chatId, "Голова болела");
                 break;
             case "0":
+                setQuestion(update);
                 sendMessage.setText("Отлично, завтра я спрошу Вас снова!");
                 updateUserQuestionState(chatId, "Голова не болела");
                 break;
@@ -354,7 +359,7 @@ public class MigrenBotService {
         switch (callbackData) {
             case "0":
                 if (surveyRepository.findIdByChatIdAndPainDate(update.getCallbackQuery().getMessage().getChatId(), getFormatDate()) == null) {
-                        sendMessage = painChoice(update, getFormatDate());
+                    sendMessage = painChoice(update, getFormatDate());
                 } else {
                     sendMessage.setText("Вы уже добавляли запись сегодня. Не переживайте, я всё сохранил. Вернусь к Вам завтра с повторным опросом.");
                 }
@@ -381,10 +386,28 @@ public class MigrenBotService {
         sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
         String callbackData = update.getCallbackQuery().getData();
 
+
         switch (callbackData) {
             case "0":
                 sendMessage.setText("Вы отменили запись на прошедшие дни. Можете создать запись снова, используя команды из меню.");
                 usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), "");
+                break;
+            default:
+                int dayOfMonth = Integer.parseInt(callbackData);
+                LocalDate currentDate = LocalDate.now();
+                LocalDate selectDay = currentDate.withDayOfMonth(dayOfMonth);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+                String formattedDate = selectDay.format(formatter);
+
+                if (!surveyRepository.existsByChatIdAndPainDate(getChatId(update), formattedDate)) {
+                    sendMessage = painChoice(update, formattedDate);
+                    usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), "");
+                    userPainDate.put(getChatId(update), formattedDate);
+                } else {
+                    sendMessage.setText("Запись о наличии головной боли на выбранный день уже существует.");
+                    setQuestion(update);
+                }
+                break;
         }
         return sendMessage;
     }
@@ -397,7 +420,14 @@ public class MigrenBotService {
 
         switch (callbackData) {
             case "333":
-                sendMessage.setText("Это информативные кнопки, в них не заложены функции.");
+                sendMessage.setText("Кнопки в разделе просмотра календаря исключительно нформативные. В них не заложены какие-либо функции.");
+                setQuestion(update);
+                break;
+            case "0":
+                sendMessage.setText("Календарь закрыт.");
+                break;
+            default:
+                setQuestion(update);
                 break;
         }
         return sendMessage;
@@ -409,7 +439,7 @@ public class MigrenBotService {
 
     private void setQuestion(Update update) {
         String newLastQuestion = "";
-        usersRepository.updateLastQuestionByChatId(update.getCallbackQuery().getMessage().getChatId(), newLastQuestion);
+        usersRepository.updateLastQuestionByChatId(getChatId(update), newLastQuestion);
     }
 
     public String getFormatDate() {
@@ -495,7 +525,8 @@ public class MigrenBotService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         LocalDate date = LocalDate.parse(dateStr, formatter);
 
-        for (int i = 1; i < date.getDayOfMonth(); i++) {
+
+        for (int i = 1; i <= date.getDayOfMonth(); i++) {
             InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
             // метод для фикса ошибки следом
             if (surveyRepository.existsByChatIdAndPainDate(getChatId(update), dateConverter(i))) {
@@ -512,12 +543,14 @@ public class MigrenBotService {
             }
         }
 
-        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-        inlineKeyboardButton.setText("Отмена");
-        inlineKeyboardButton.setCallbackData("0");
-        row.add(inlineKeyboardButton);
+        List<InlineKeyboardButton> cancelRow = new ArrayList<>();
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setText("Отмена");
+        cancelButton.setCallbackData("0");
+        cancelRow.add(cancelButton);
 
         msgButtons.add(row);
+        msgButtons.add(cancelRow);
         inlineKeyboardMarkup.setKeyboard(msgButtons);
         return inlineKeyboardMarkup;
     }
@@ -547,7 +580,14 @@ public class MigrenBotService {
             }
         }
 
+        List<InlineKeyboardButton> finishlRow = new ArrayList<>();
+        InlineKeyboardButton finishButton = new InlineKeyboardButton();
+        finishButton.setText("Закрыть");
+        finishButton.setCallbackData("0");
+        finishlRow.add(finishButton);
+
         msgButtons.add(row);
+        msgButtons.add(finishlRow);
         inlineKeyboardMarkup.setKeyboard(msgButtons);
         return inlineKeyboardMarkup;
     }
@@ -556,7 +596,7 @@ public class MigrenBotService {
         Long chatId;
         if (update.getMessage() == null) {
             chatId = update.getCallbackQuery().getMessage().getChatId();
-        }else {
+        } else {
             chatId = update.getMessage().getChatId();
         }
         return chatId;
@@ -568,6 +608,5 @@ public class MigrenBotService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         return newDate.format(formatter);
     }
-
 
 }
