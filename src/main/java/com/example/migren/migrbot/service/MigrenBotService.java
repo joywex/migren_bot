@@ -27,6 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class MigrenBotService {
 
+    //to do методы которые не выполняют никакую большую логику вынести в отедльный класс с аннотациец @UtilityClass
+
+
     private final SurveyRepository surveyRepository;
     private final UsersRepository usersRepository;
     private final TabletsRepository tabletsRepository;
@@ -91,7 +94,7 @@ public class MigrenBotService {
                     sendMessage = painDateCalendar(update);
                     break;
                 case "/feedback":
-                    userState.put(update.getMessage().getChatId(), "waiting_feedback");
+                    userState.put(update.getMessage().getChatId(), "waiting_feedback"); //to do вынести в отельные методы как выше
                     sendMessage.setChatId(String.valueOf(chatId));
                     sendMessage.setText("Введите ваш или пожелание о работе бота:");
                     break;

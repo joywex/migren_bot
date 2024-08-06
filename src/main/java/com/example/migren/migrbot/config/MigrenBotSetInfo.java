@@ -61,6 +61,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
     }
 
     public void editMsgs() {
+        // to do перенести метод в сервис и возвращать список EditMessageText
         List<Integer> msgIds = migrenBotService.getMsgIdsList();
 
         if (!msgIds.isEmpty()) {
