@@ -113,7 +113,7 @@ public class Utils {
     public SendMessage feedbackMsg(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        sendMessage.setText("Введите ваш или пожелание о работе бота:");
+        sendMessage.setText("Вы можете оставить отзыв или пожелание о работе бота:");
         return sendMessage;
     }
 
