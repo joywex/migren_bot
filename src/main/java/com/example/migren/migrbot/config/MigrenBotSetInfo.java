@@ -123,7 +123,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
         try {
             execute(setMyCommands);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
@@ -134,7 +134,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
                 deleteAllMessages();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                e.printStackTrace();
+                e.getMessage();
             }
         });
     }
@@ -154,7 +154,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
             try {
                 execute(deleteMessage);
             } catch (TelegramApiException e) {
-                e.printStackTrace(); // Обработка исключений
+                e.getMessage(); // Обработка исключений
             }
         }
 
