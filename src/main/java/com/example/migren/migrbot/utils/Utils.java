@@ -117,6 +117,7 @@ public class Utils {
         return sendMessage;
     }
 
+    //проверить эдиты
 
 //    public boolean hasUser(Message message) {
 //        if (message == null) {
