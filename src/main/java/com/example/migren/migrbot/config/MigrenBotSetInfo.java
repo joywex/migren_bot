@@ -101,7 +101,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
                     try {
                         execute(editMessageText);
                     } catch (TelegramApiException e) {
-                        e.printStackTrace();
+                        e.getMessage();
                     }
                 }
             }
