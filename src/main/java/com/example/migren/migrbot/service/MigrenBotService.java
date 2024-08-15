@@ -207,7 +207,7 @@ public class MigrenBotService {
 
     public SendMessage painChoice(Update update, String date) {
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+        sendMessage.setChatId(String.valueOf(Utils.getChatId(update)));
         sendMessage.setText("У вас болела голова?\n\nЗапись создаётся на " + date);
         Utils.createKeyboard();
         sendMessage.setReplyMarkup(Utils.createKeyboard());
@@ -506,14 +506,14 @@ public class MigrenBotService {
             }
         }
 
-        List<InlineKeyboardButton> finishlRow = new ArrayList<>();
+        List<InlineKeyboardButton> finishRow = new ArrayList<>();
         InlineKeyboardButton finishButton = new InlineKeyboardButton();
         finishButton.setText("Закрыть");
         finishButton.setCallbackData("0");
-        finishlRow.add(finishButton);
+        finishRow.add(finishButton);
 
         msgButtons.add(row);
-        msgButtons.add(finishlRow);
+        msgButtons.add(finishRow);
         inlineKeyboardMarkup.setKeyboard(msgButtons);
         return inlineKeyboardMarkup;
     }
