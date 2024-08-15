@@ -10,19 +10,19 @@ import com.example.migren.migrbot.utils.Utils;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -422,6 +422,50 @@ public class MigrenBotService {
                 break;
         }
         return sendMessage;
+    }
+
+    public List<EditMessageText> addEdits() {
+        List<EditMessageText> editMessages = new ArrayList<>();
+
+        if (!msgIdsList.isEmpty()) {
+            for (Map.Entry<Long, String> entry : userQuestion.entrySet()) {
+                long chatId = entry.getKey();
+                String question = entry.getValue();
+
+                for (Integer messageId : msgIdsList) {
+                    EditMessageText editMessageText = new EditMessageText();
+                    editMessageText.setChatId(String.valueOf(chatId));
+                    editMessageText.setMessageId(messageId);
+                    editMessageText.setParseMode("Markdown");
+
+                    switch (question) {
+                        case "Голова болела":
+                            editMessageText.setText("У вас болела голова?\n\n\n*Записал ответ:*\nБыла головная боль \uD83E\uDD74");
+                            break;
+                        case "Голова не болела":
+                            editMessageText.setText("У вас болела голова?\n\n\n*Записал ответ:*\nГоловной боли не было \uD83D\uDD25");
+                            break;
+                        case "Принимал лекарство":
+                            editMessageText.setText("Принимали ли Вы лекарство?\n\n\n*Записал ответ:*\nПринимал(а) лекарство \uD83D\uDC4D\uD83C\uDFFB");
+                            break;
+                        case "Не принимал лекарство":
+                            editMessageText.setText("Принимали ли Вы лекарство?\n\n\n*Записал ответ:*\nНе принимал(а) лекарство \uD83D\uDC4E\uD83C\uDFFB");
+                            break;
+                        case "Лекарство помогло":
+                            editMessageText.setText("Лекарство помогло от головной боли?\n\n\n*Записал ответ:*\nПомогло \uD83D\uDC4D\uD83C\uDFFB");
+                            break;
+                        case "Лекарство не помогло":
+                            editMessageText.setText("Лекарство помогло от головной боли?\n\n\n*Записал ответ:*\nНе помогло \uD83D\uDC4E\uD83C\uDFFB");
+                            break;
+                        default:
+                            editMessageText.setText("Неизвестный вопрос.");
+                            break;
+                    }
+                    editMessages.add(editMessageText);
+                }
+            }
+        }
+        return editMessages;
     }
 
     private void saveComment(Long surveyId, String comment) {

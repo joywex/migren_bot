@@ -1,11 +1,7 @@
 package com.example.migren.migrbot.utils;
 
-import com.example.migren.migrbot.entity.UsersEntity;
-import com.example.migren.migrbot.repository.SurveyRepository;
-import com.example.migren.migrbot.repository.UsersRepository;
 import lombok.experimental.UtilityClass;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
