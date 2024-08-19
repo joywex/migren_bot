@@ -57,6 +57,7 @@ public class MigrenBotService {
         this.msgIdsDeleteList = Collections.synchronizedList(new ArrayList<>());
     }
 
+    //setChatId везде использовать метод из Utils
     public SendMessage sendMessage(Update update) {
         SendMessage sendMessage = new SendMessage();
         long chatId;
@@ -104,6 +105,7 @@ public class MigrenBotService {
         return sendMessage;
     }
 
+    //удалить если не нужен
     public boolean hasUser(Message message) {
         if (message == null) {
             return true;
@@ -378,6 +380,7 @@ public class MigrenBotService {
         String callbackData = update.getCallbackQuery().getData();
 
 
+        // заменить на if
         switch (callbackData) {
             case "0":
                 sendMessage.setText("Вы отменили запись на прошедшие дни. Можете создать запись снова, используя команды из меню.");
@@ -427,6 +430,8 @@ public class MigrenBotService {
     public List<EditMessageText> addEdits() {
         List<EditMessageText> editMessages = new ArrayList<>();
 
+
+        // заменить userQuestion и msgIdList на потокобезопасный List с объектами класса, который хранит поля chatId, question, messageId
         if (!msgIdsList.isEmpty()) {
             for (Map.Entry<Long, String> entry : userQuestion.entrySet()) {
                 long chatId = entry.getKey();
@@ -468,6 +473,7 @@ public class MigrenBotService {
         return editMessages;
     }
 
+    //если не используешь то удаляй
     private void saveComment(Long surveyId, String comment) {
         tabletsRepository.updateCommentBySurveyId(surveyId, comment);
     }

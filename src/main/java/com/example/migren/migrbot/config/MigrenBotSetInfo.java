@@ -2,6 +2,7 @@ package com.example.migren.migrbot.config;
 
 import com.example.migren.migrbot.repository.UsersRepository;
 import com.example.migren.migrbot.service.MigrenBotService;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -24,13 +25,13 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
 
     private final MigrenBotConfig migrenBotConfig;
     private final MigrenBotService migrenBotService;
+    //если не надо то удалить
     private final UsersRepository usersRepository;
 
     private MigrenBotSetInfo(MigrenBotConfig migrenBotConfig, MigrenBotService migrenBotService, UsersRepository usersRepository) {
         this.migrenBotConfig = migrenBotConfig;
         this.migrenBotService = migrenBotService;
         this.usersRepository = usersRepository;
-        initCommands();
     }
 
     @Override
@@ -122,6 +123,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
 //        }
 //    }
 
+    @PostConstruct
     private void initCommands() {
         List<BotCommand> botCommands = new ArrayList<>();
         botCommands.add(new BotCommand("/start", "Запуск бота"));
@@ -152,7 +154,7 @@ public class MigrenBotSetInfo extends TelegramLongPollingBot {
         });
     }
 
-
+    //добавить поле удаление в объект класса который для редактирования и удалять по нему
     public void deleteAllMessages() {
         List<Integer> msgIdsDeleteList = migrenBotService.getMsgIdsDeleteList();
         String chatId = migrenBotService.getChatIdForDeleteMsg();
